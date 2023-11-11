@@ -3,7 +3,6 @@
 #include <iostream>
 #include <Windows.h>
 
-typedef void (WINAPIV* LPFN_DISPLAYHELLO) ();
 
 DWORD WINAPI MyThread(HMODULE module) {
     AllocConsole();
@@ -18,21 +17,24 @@ DWORD WINAPI MyThread(HMODULE module) {
     uintptr_t thirdStep = *(uintptr_t*)(secondStep + 0x80);
     uintptr_t fourthStep = *(uintptr_t*)(thirdStep + 0x4);
     uintptr_t fifthStep = *(uintptr_t*)(fourthStep + 0x2A4);
-    float* sixthStep = (float*)(fifthStep + 0x33C);
+    float* camera_x = (float*)(fifthStep + 0x334);
+    float* camera_y = (float*)(fifthStep + 0x338);
+    float* camera_z = (float*)(fifthStep + 0x33C);
 
     uintptr_t ServerPtr = (uintptr_t)GetModuleHandle(L"server.dll");
-    HINSTANCE ServerDLL = LoadLibraryA("server.dll");
-    LPFN_DISPLAYHELLO fnDisplayName = (LPFN_DISPLAYHELLO)GetProcAddress(ServerDLL, "UTIL_GetLocalPlayer()");
+    uintptr_t fS = *(uintptr_t*)(ServerPtr + 0x006E4E94);
+    float* playerX = (float*)(fS + 0x304);
+    float* playerY = (float*)(fS + 0x308);
+    float* playerZ = (float*)(fS + 0x30C);
 
-    std::cout << fnDisplayName();
-    FreeLibrary(ServerDLL);
-
-    std::cout << sixthStep;
-    float z_coord = *sixthStep;
-    std::cout << z_coord;
 
     while (true) {
-        *sixthStep = 500;
+        if (GetAsyncKeyState('F') & 1) { //Press F key to go up
+            *playerZ = *playerZ + 500;
+        }
+        if (GetAsyncKeyState('G') & 1) { //Press G key to go down
+            *playerZ = *playerZ - 500;
+        }
     }
 
 }

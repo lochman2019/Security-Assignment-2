@@ -3,23 +3,34 @@
 #include <iostream>
 #include <Windows.h>
 #include <shared_mutex>
-
-typedef struct HackVariables {
-    bool jumpHack = false;
-    bool multiplePortalsHack = false;
-};
+#include "IVEngineServer.h"
+#include "IVEngineClient.h"
+#include "globalValues.h"
 
 HackVariables* hackVars = new HackVariables();
-
 SRWLOCK srwlock = SRWLOCK_INIT;
+WindowVairables* windowVars = new WindowVairables();
+Player* player = new Player();
+Camera* camera = new Camera();
+PortalGun* portalGun = new PortalGun();
+IVEngineClient* engineServer;
 
-HINSTANCE global_hInstance;
-HWND on_off1;
-HWND on_off2;
-HWND label1;
-HWND label2;
+void* FindInterface(HMODULE dll, const char* name) {
+    auto a = GetProcAddress(dll, "CreateInterface");
+    if (a == NULL) {
+        std::cout << "IT'S NULL\n";
+    }
+    CreateInterfaceType CreateInterfaceFunction = (CreateInterfaceType)a;
+    std::cout << "Got factory\n";
 
-VOID ChangeOnOff(HWND* wnd, bool state) {
+    int returnCode = 0;
+    void* interface = CreateInterfaceFunction(name, &returnCode);
+
+    return interface;
+}
+
+// Changes the state of the necessary label 
+void ChangeOnOff(HWND* wnd, bool state) { 
     if (state) {
         SetWindowText(*wnd, L"Off");
     }
@@ -34,10 +45,11 @@ VOID ChangeOnOff(HWND* wnd, bool state) {
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CREATE:
-        on_off1 = CreateWindow(L"Static", L"Off", WS_CHILD | WS_VISIBLE, 125, 10, 175, 30, hwnd, 0, global_hInstance, 0);
-        on_off2 = CreateWindow(L"Static", L"Off", WS_CHILD | WS_VISIBLE, 125, 50, 175, 30, hwnd, 0, global_hInstance, 0);
-        label1 = CreateWindow(L"Static", L"| Jump hack - Press F for up and G for down", WS_CHILD | WS_VISIBLE, 300, 10 , 400, 30, hwnd, 0, global_hInstance, 0);
-        label2 = CreateWindow(L"Static", L"| Portal hack - Press 1-9 for different Portal pairs", WS_CHILD | WS_VISIBLE, 300, 50, 400, 30, hwnd, 0, global_hInstance, 0);
+        // Creates the labels for the buttons
+        windowVars->on_off1 = CreateWindow(L"Static", L"Off", WS_CHILD | WS_VISIBLE, 125, 10, 175, 30, hwnd, 0, windowVars->global_hInstance, 0);
+        windowVars->on_off2 = CreateWindow(L"Static", L"Off", WS_CHILD | WS_VISIBLE, 125, 50, 175, 30, hwnd, 0, windowVars->global_hInstance, 0);
+        windowVars->label1 = CreateWindow(L"Static", L"| Jump hack - Press F for up and G for down", WS_CHILD | WS_VISIBLE, 300, 10 , 400, 30, hwnd, 0, windowVars->global_hInstance, 0);
+        windowVars->label2 = CreateWindow(L"Static", L"| Portal hack - Press 1-9 for different Portal pairs", WS_CHILD | WS_VISIBLE, 300, 50, 400, 30, hwnd, 0, windowVars->global_hInstance, 0);
 
     case WM_COMMAND:
         std::cout << "command called\n";
@@ -46,14 +58,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             // perform actions here
             std::cout << "Button1 pressed\n";
             AcquireSRWLockExclusive(&srwlock);
-            ChangeOnOff(&on_off1, hackVars->jumpHack);
+            ChangeOnOff(&windowVars->on_off1, hackVars->jumpHack);
             hackVars->jumpHack = !(hackVars->jumpHack);
             ReleaseSRWLockExclusive(&srwlock);
         }
         else if (LOWORD(wParam) == LOWORD(L"Button2")) {
             std::cout << "Button2 pressed\n";
             AcquireSRWLockExclusive(&srwlock);
-            ChangeOnOff(&on_off2, hackVars->multiplePortalsHack);
+            ChangeOnOff(&windowVars->on_off2, hackVars->multiplePortalsHack);
             hackVars->multiplePortalsHack = !(hackVars->multiplePortalsHack);
             ReleaseSRWLockExclusive(&srwlock);
         }
@@ -95,7 +107,7 @@ void CreateNewWindow(HINSTANCE hInstance) {
         NULL,       // Menu
         hInstance,  // Instance handle
         NULL        // Additional application data
-    );
+    ); // Creates a new window
 
     if (hwnd == NULL) {
         MessageBox(NULL, L"Window creation failed", L"Error", MB_ICONERROR);
@@ -114,7 +126,7 @@ void CreateNewWindow(HINSTANCE hInstance) {
         (HMENU)L"Button1",
         hInstance,
         NULL
-    );
+    ); // Creates a new button
 
     HWND button2 = CreateWindow(
         L"BUTTON",
@@ -141,8 +153,8 @@ void CreateNewWindow(HINSTANCE hInstance) {
 }
 
 
-
-VOID PortalIDSwitch(int* portalId) {
+// Switches the portal linkage ID
+void PortalIDSwitch(int* portalId) {
     if (GetAsyncKeyState('1') & 1) {
         *portalId = 0;
     } 
@@ -175,47 +187,27 @@ VOID PortalIDSwitch(int* portalId) {
     }
 }
 
-DWORD WINAPI MyThread(HMODULE module) {
-    AllocConsole();
-    FILE* f = new FILE;
-    freopen_s(&f, "CONOUT$", "w", stdout);
-
-    std::cout << "Injection active\n";
-
-    HMODULE ClientModule = GetModuleHandle(L"client.dll");
-    HMODULE ServerModule = GetModuleHandle(L"server.dll");
-    HMODULE EngineModule = GetModuleHandle(L"engine.dll");
-
-    uintptr_t ClientPtr = (uintptr_t)GetModuleHandle(L"client.dll");
-    uintptr_t ServerPtr = (uintptr_t)GetModuleHandle(L"server.dll");
-    uintptr_t EnginePtr = (uintptr_t)GetModuleHandle(L"engine.dll");
-    auto CreateInterfaceAddress = GetProcAddress(EngineModule, "CreateInterface");
-    auto ServerConsoleCommandAddress = GetProcAddress(EngineModule, "Cbuf_AddText");
-    std::cout << "CreateInterface address: ";
-    std::cout << ServerConsoleCommandAddress;
-    std::cout << "\n";
-
-    //Camera Object
+void InitialisePointers() {
+    std::cout << "Start initialise\n";
+    // Get pointer to Camera object
     uintptr_t firstStep = *(uintptr_t*)(ClientPtr + 0x004EAAC4);
     uintptr_t secondStep = *(uintptr_t*)(firstStep + 0xC);
     uintptr_t thirdStep = *(uintptr_t*)(secondStep + 0x80);
     uintptr_t fourthStep = *(uintptr_t*)(thirdStep + 0x4);
     uintptr_t fifthStep = *(uintptr_t*)(fourthStep + 0x2A4);
-    float* cameraX = (float*)(fifthStep + 0x334);
-    float* cameraY = (float*)(fifthStep + 0x338);
-    float* cameraZ = (float*)(fifthStep + 0x33C);
+    camera->X = (float*)(fifthStep + 0x334);
+    camera->Y = (float*)(fifthStep + 0x338);
+    camera->Z = (float*)(fifthStep + 0x33C);
+    std::cout << "Got camera\n";
 
-    std::cout << "Got camera object\n";
-
-    //Player object
+    // Player coordinates
     uintptr_t fS = *(uintptr_t*)(ServerPtr + 0x006E4E94);
-    float* playerX = (float*)(fS + 0x304);
-    float* playerY = (float*)(fS + 0x308);
-    float* playerZ = (float*)(fS + 0x30C);
+    player->X = (float*)(fS + 0x304);
+    player->Y = (float*)(fS + 0x308);
+    player->Z = (float*)(fS + 0x30C);
+    std::cout << "Got player\n";
 
-    std::cout << "Got player object\n";
-
-    //Portalgun object
+    // Pointer to PortalGun ID
     uintptr_t s1 = *(uintptr_t*)(ServerPtr + 0x006DD15C);
     uintptr_t s2 = *(uintptr_t*)(s1 + 0X0);
     uintptr_t s3 = *(uintptr_t*)(s2 + 0x50);
@@ -223,30 +215,73 @@ DWORD WINAPI MyThread(HMODULE module) {
     uintptr_t s5 = *(uintptr_t*)(s4 + 0x14);
     uintptr_t s6 = *(uintptr_t*)(s5 + 0x18);
     uintptr_t s7 = *(uintptr_t*)(s6 + 0xC);
-    std::cout << "Dereference attempt";
-    int* portalGunPortalID = (int*)(s7 + 0x598);
+    std::cout << "Starting final step\n";
+    portalGun->linkID = (int*)(s7 + 0x598);
+    std::cout << "Got portal gun\n";
 
+    
+    std::cout << "Initialised\n";
+}
 
-    std::cout << "Got portalgun\n";
-    std::cout << *portalGunPortalID;
+DWORD WINAPI MyThread(HMODULE module) {
+    AllocConsole();
+    FILE* f = new FILE;
+    freopen_s(&f, "CONOUT$", "w", stdout);
 
-    //(*EnginePtr)->ServerCommand();
+    std::cout << "Injection active\n";
 
-    while (true) {
+    // DLLs
+    ClientModule = GetModuleHandle(L"client.dll");
+    ServerModule = GetModuleHandle(L"server.dll");
+    EngineModule = GetModuleHandle(L"engine.dll");
+
+    ClientPtr = (uintptr_t)GetModuleHandle(L"client.dll");
+    ServerPtr = (uintptr_t)GetModuleHandle(L"server.dll");
+    EnginePtr = (uintptr_t)GetModuleHandle(L"engine.dll");
+
+    // Interface for client engine
+    engineServer = (IVEngineClient*)FindInterface(EngineModule, "VEngineClient014");
+
+    bool isLoading = false;
+    InitialisePointers();
+
+    // Main loop
+    while (true) { 
+        if (!engineServer->IsInGame()) {
+            std::cout << "Loading\n";
+        }
+        if (!engineServer->IsInGame() && !isLoading) {
+            std::cout << "start load\n";
+            isLoading = true;
+        }
+        else if (engineServer->IsInGame() && isLoading && !engineServer->IsDrawingLoadingImage()) {
+            std::cout << "finish load\n";
+            isLoading = false;
+            Sleep(500);
+            InitialisePointers();
+        }
+        // Gets a lock to read the global hackVars 
         AcquireSRWLockShared(&srwlock);
+        // Checks if different hacks are active
         if (hackVars->jumpHack) {
             if (GetAsyncKeyState('F') & 1) { //Press F key to go up
-                *playerZ = *playerZ + 500;
-                std::cout << playerZ;
-                std::cout << *playerZ;
+                *(player->Z) = *(player->Z)+500;
             }
             if (GetAsyncKeyState('G') & 1) { //Press G key to go down
-                *playerZ = *playerZ - 500;
+                *(player->Z) = *(player->Z)-500;
             }
         }
-        if (hackVars->multiplePortalsHack) {
-            PortalIDSwitch(portalGunPortalID);
+        if (hackVars->multiplePortalsHack) { // Performs the checks for the MultiplePortals section
+            PortalIDSwitch(portalGun->linkID);
         }
+        if (GetAsyncKeyState('C')) {
+            std::cout << "Pressed C";
+            engineServer->ClientCmd("npc_create npc_zombie"); // Executes a game console command
+            while (GetAsyncKeyState('C')) {
+                Sleep(1);
+            }
+        }
+        
         ReleaseSRWLockShared(&srwlock);
     }
 
@@ -262,7 +297,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     {
     case DLL_PROCESS_ATTACH:
     {
-        global_hInstance = hModule;
+        windowVars->global_hInstance = hModule;
         CloseHandle(CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)MyThread, hModule, 0, nullptr));
         CloseHandle(CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)CreateNewWindow, hModule, 0, nullptr));
     }

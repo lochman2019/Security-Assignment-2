@@ -1,0 +1,2 @@
+#define PORTALHACK_API __declspec(dllexport)
+#define PORTALHACK_API __declspec(dllimport)

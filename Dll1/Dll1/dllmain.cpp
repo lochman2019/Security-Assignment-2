@@ -3,6 +3,8 @@
 #include <iostream>
 #include <Windows.h>
 
+const float SUPER_SPRINT_SF = 1.2f;
+
 
 DWORD WINAPI MyThread(HMODULE module) {
     AllocConsole();
@@ -23,17 +25,50 @@ DWORD WINAPI MyThread(HMODULE module) {
 
     uintptr_t ServerPtr = (uintptr_t)GetModuleHandle(L"server.dll");
     uintptr_t fS = *(uintptr_t*)(ServerPtr + 0x006E4E94);
+    float* playerVelocityX = (float*)(fS + 0x214);
+    float* playerVelocityY = (float*)(fS + 0x218);
+    float* playerVelocityZ = (float*)(fS + 0x21C);
     float* playerX = (float*)(fS + 0x304);
     float* playerY = (float*)(fS + 0x308);
     float* playerZ = (float*)(fS + 0x30C);
 
+    float targetZ = 0.0f;
+    bool levitating = false;
+    bool superSprint = false;
 
     while (true) {
-        if (GetAsyncKeyState('F') & 1) { //Press F key to go up
-            *playerZ = *playerZ + 500;
+        if (levitating) {
+            if (*playerZ < targetZ) {
+                *playerVelocityZ = 200.0f;
+            }
+            else {
+                *playerVelocityZ = 0.0f;
+            }
         }
-        if (GetAsyncKeyState('G') & 1) { //Press G key to go down
-            *playerZ = *playerZ - 500;
+        
+        if (superSprint) {
+            *playerVelocityX *= SUPER_SPRINT_SF;
+            *playerVelocityY *= SUPER_SPRINT_SF;
+        }
+
+        if (GetAsyncKeyState('G') & 1) {    // scale player velocity for sprint if g pressed
+            superSprint = !superSprint;
+
+            std::cout << "super sprint: ";
+            std::cout << superSprint;
+        }
+        
+        if (GetAsyncKeyState('J') & 1) {    // Super jump if j pressed
+            std::cout << "super jump";
+            *playerVelocityZ = 500.0f;
+        }
+
+        if (GetAsyncKeyState('C') & 1) { // Levitate if c pressed
+            levitating = !levitating;
+            targetZ = *playerZ + 30.0f;
+
+            std::cout << "levitate: ";
+            std::cout << levitating;
         }
     }
 

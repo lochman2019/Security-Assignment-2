@@ -1,0 +1,7 @@
+﻿  dllmain.cpp
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(15,2): warning C4091: 'typedef ': ignored on left of 'HackVariables' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(27,2): warning C4091: 'typedef ': ignored on left of 'WindowVairables' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(46,2): warning C4091: 'typedef ': ignored on left of 'Player' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(52,2): warning C4091: 'typedef ': ignored on left of 'Camera' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(56,2): warning C4091: 'typedef ': ignored on left of 'PortalGun' when no variable is declared
+  portal_hack.vcxproj -> C:\Users\User\source\repos\portal_hack\Debug\portalhack.dll

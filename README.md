@@ -12,5 +12,6 @@ Based on an old game, more info can be found [here](https://en.wikipedia.org/wik
 3. After some time of spawning cubes, you should be in front of a 5x5 grid. 
 4. You can press `N` to load a new level. 
 5. By aiming your portal gun and using **left click**, you can toggle the cubes and surrounding areas. 
-6. Have fun!
+6. The goal of the game is to turn all of the lights off, in this case hide all of the boxes.
+7. Have fun!
 

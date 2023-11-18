@@ -5,6 +5,7 @@
 #include <shared_mutex>
 #include "IVEngineServer.h"
 #include "IVEngineClient.h"
+#include <cstdint>
 
 // Structure used to store the current state of different hacks
 // Used to allow the hacks to be controlled by the Window and the updates
@@ -16,6 +17,10 @@ typedef struct HackVariables {
 
 // Used as the signature for the exported CreateInterface function 
 typedef void* (__cdecl* CreateInterfaceType)(const char* name, int* returnCode);
+
+typedef void* (__thiscall* SetAbsOriginType)(int* ent, float* pos);
+typedef void* (__thiscall* SetNetOriginType)(int* ent, float* pos);
+typedef int (__thiscall* GetModelType)(int* ent);
 
 // Variables used to control various parts of the Window
 typedef struct WindowVairables {
@@ -53,4 +58,13 @@ typedef struct Camera {
 
 typedef struct PortalGun {
     int* linkID;
+};
+
+typedef struct EntityList {
+    void* head; 
+    int count;
+};
+
+class CBaseEntity {
+    void SetAbsOriginFunc(float* origin);
 };

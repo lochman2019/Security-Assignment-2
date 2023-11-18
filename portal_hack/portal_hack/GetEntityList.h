@@ -4,16 +4,6 @@
 
 struct vec3 { float x, y, z; };
 
-//class Ent {
-//public:
-//	union {
-//		DEFINE_MEMBER_N(vec3, origin, offsets::m_vecorigin);
-//		DEFINE_MEMBER_N(int, clientId, 0x64);
-//		DEFINE_MEMBER_N(int, m_iHealth, offsets: : m_iHealth);
-//		DEFINE_MEMBER_N(vec3, m_vecviewoffset, offsets: : m_vecviewoffset);
-//	};
-//};
-
 // Adapted from https://github.com/ValveSoftware/source-sdk-2013/blob/0d8dceea4310fde5706b3ce1c70609d72a38efdf/mp/src/public/icliententitylist.h#L42
 class IClientEntityList
 {

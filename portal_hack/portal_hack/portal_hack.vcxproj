@@ -224,6 +224,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="GetEntityList.h" />
     <ClInclude Include="globalValues.h" />
+    <ClInclude Include="header.h" />
     <ClInclude Include="IVEngineClient.h" />
     <ClInclude Include="IVEngineServer.h" />
     <ClInclude Include="pch.h" />
@@ -232,6 +233,7 @@
   <ItemGroup>
     <ClCompile Include="ControlWindow.cpp" />
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="patternMatching.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Create</PrecompiledHeader>

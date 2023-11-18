@@ -1,7 +1,25 @@
 ﻿  dllmain.cpp
-C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(15,2): warning C4091: 'typedef ': ignored on left of 'HackVariables' when no variable is declared
-C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(27,2): warning C4091: 'typedef ': ignored on left of 'WindowVairables' when no variable is declared
-C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(46,2): warning C4091: 'typedef ': ignored on left of 'Player' when no variable is declared
-C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(52,2): warning C4091: 'typedef ': ignored on left of 'Camera' when no variable is declared
-C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(56,2): warning C4091: 'typedef ': ignored on left of 'PortalGun' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(16,2): warning C4091: 'typedef ': ignored on left of 'HackVariables' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(32,2): warning C4091: 'typedef ': ignored on left of 'WindowVairables' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(51,2): warning C4091: 'typedef ': ignored on left of 'Player' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(57,2): warning C4091: 'typedef ': ignored on left of 'Camera' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(61,2): warning C4091: 'typedef ': ignored on left of 'PortalGun' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\globalValues.h(66,2): warning C4091: 'typedef ': ignored on left of 'EntityList' when no variable is declared
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(289,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(290,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(291,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(292,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(293,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(294,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(362,16): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(377,26): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(377,33): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(377,40): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(377,47): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(377,54): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(378,26): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(378,33): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(378,40): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(378,47): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(378,54): warning C4305: 'initializing': truncation from 'double' to 'float'
   portal_hack.vcxproj -> C:\Users\User\source\repos\portal_hack\Debug\portalhack.dll

@@ -7,6 +7,8 @@
 #include "IVEngineClient.h"
 #include "globalValues.h"
 #include "GetEntityList.h"
+#include <vector>
+using namespace std;
 
 HackVariables* hackVars = new HackVariables();
 SRWLOCK srwlock = SRWLOCK_INIT;
@@ -16,6 +18,23 @@ Camera* camera = new Camera();
 PortalGun* portalGun = new PortalGun();
 IVEngineClient* engineServer;
 IClientEntityList* clientEntityList;
+SetAbsOriginType SetAbsOriginFunc;
+SetNetOriginType SetNetOriginFunc;
+SetAbsOriginType SetLocalOriginFunc;
+SetAbsOriginType SetServerOriginFunc;
+GetModelType GetModelFunc;
+
+float basePos[3] = { 0, 0, 0 };
+
+uint8_t* PatternScan(void* module, const char* signature);  
+uint8_t* SecondPattern(void* module, const char* signature);
+
+bool grid[5][5] = {};
+
+//void CBaseEntity::SetAbsOriginFunc(float* origin) {
+//    using SetAbsOriginType = void(__thiscall*)(void*, float* origin);
+//    static SetAbsOriginType SetAbsOrigin = (SetAbsOriginType)PatternScan()
+//}
 
 void* FindInterface(HMODULE dll, const char* name) {
     auto a = GetProcAddress(dll, "CreateInterface");
@@ -234,37 +253,183 @@ void InitialisePointers() {
     std::cout << "Initialised\n";
 }
 
-
-int GetEntityType(void* ent) {
-    uintptr_t a = *(uintptr_t*)ent;
-    return *((int*)(a + 0x8 + 0x8 + 0x1 + 0x14));
+void SetEntityPos(float x, float y, float z, void* ent) {
+    float* x_coord = (float*)ent + 0x97;
+    float* y_coord = (float*)ent + 0x97 + 0x1;
+    float* z_coord = (float*)ent + 0x97 + 0x2; // Positions of the MODEL (not the actual object)
+    float* roll = (float*)ent + 0x97 + 0x3;
+    float* pitch = (float*)ent + 0x97 + 0x4;
+    float* yaw = (float*)ent + 0x97 + 0x5;
+    float origin[3] = { x, y, z };
+    float angle[3] = { 0, 0, 0 };
+    float vel[3] = { 0, 0, 0 };
+    //SetAbsOriginFunc((int*)ent, origin);
+    SetNetOriginFunc((int*)ent, origin);
+    SetAbsOriginFunc((int*)ent, origin);
+    *roll = 0;
+    *pitch = 0;
+    *yaw = 0;
 }
 
-void GetAllEntities() { // Gets all entities of the weighted box type in the world
-    int n_z = 0;
+vector<void*> GetAllEntities() { // Gets all entities of the weighted box type in the world
     int h_i = clientEntityList->GetHighestEntityIndex(); // Get the highest index currently in use
-    std::cout << "\n";
+    vector<void*> entities = {};
     int i = 0;
     void* current = 0x0;
-    void* p = 0x0;
+    int number_blocks = 0;
+    bool isFirst = true;
     while (i <= h_i) {
         if ((current = clientEntityList->GetClientEntity(i)) != 0x0) { // Iterate through the entity list, filter out null
-            int* e_id = (int*)(((int*)current) + 0x23);
-            
-            //std::cout << "index: " << i << " | address: " << current << " | id : " << e_id << " | id_a : " << *e_id << "\n";
-            if (*e_id == 131273) { // Check if the entity is a weighted box
-                float* x_coord = (float*)current + 0x97;
-                float* y_coord = (float*)current + 0x97 + 0x1;
-                float* z_coord = (float*)current + 0x97 + 0x2; // Positions of the MODEL (not the actual object)
-                std::cout << "Base id " << current << "\n";
-                std::cout << "id : " << i << " | x : " << *x_coord << " | y : " << *y_coord << " | z : " << *z_coord << "\n";
-                //*x_coord = *(player->X) + 10;
-                //*y_coord = *(player->Y);
-                //*z_coord = *(player->Z);
+            int* e_id = (int*)(((int*)current) + 0x1D);
+
+            //auto name = GetModelFunc((int*)current);
+            auto name = " ";
+            //std::cout << "index: " << i << " | address: " << current << " | id : " << e_id << " | id_a : " << *e_id << " | name: " << name << "\n";
+            if (*e_id == 257) { // Check if the entity is a weighted box
+                int a1 = *(((float*)current) + 0x68) * 100;
+                int a2 = *(((float*)current) + 0x69) * 100;
+                int a3 = *(((float*)current) + 0x6A) * 100;
+                int a4 = *(((float*)current) + 0x6B) * 100;
+                int a5 = *(((float*)current) + 0x6C) * 100;
+                int a6 = *(((float*)current) + 0x6D) * 100;
+                int v1 = -2025;
+                int v2 = 2025;
+                if (a1 == v1 && a2 == v1 && a3 == v1 && a4 == v2 && a5 == v2 && a6 == v2) {
+                    entities.push_back(current);
+                }
             }
         }
         i++;
 
+    }
+    //std::cout << "count " << c << "\n";
+   // std::cout << "sioze " << entities.size() << "\n";
+    return entities;
+}
+
+void FlipPixels(int i, int j) {
+    int iVals[2] = { i - 1, i + 1 };
+    int jVals[2] = { j - 1, j + 1 };
+    int c;
+    for (int a = 0; a < 2; a++) {
+        c = iVals[a];
+        if (c >= 0 && c <= 4) {
+            grid[c][j] = !grid[c][j];
+        }
+        c = jVals[a];
+        if (c >= 0 && c <= 4) {
+            grid[i][c] = !grid[i][c];
+        }
+    }
+    grid[i][j] = !grid[i][j];
+}
+
+int GetClosest(float x, float* in) {
+    float a[5] = { };
+    for (int i = 0; i < 5; i++) {
+        a[i] = abs(in[i] - x);
+    }
+    int s_i = 0;
+    float smallest = 100;
+    for (int i = 0; i < 5; i++) {
+        if (a[i] < smallest) {
+            smallest = a[i];
+            s_i = i;
+        }
+    }
+    return s_i;
+}
+
+void NewLevel() {
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            if (rand() % 100 > 49) {
+                grid[i][j] = true;
+            }
+            else {
+                grid[i][j] = false;
+            }
+        }
+    }
+}
+
+void DisplayGrid() {
+    int width = 5;
+    int height = 5;
+    vector<void*> entities = GetAllEntities();
+    int diff = (width * height) - entities.size();
+    int size_diff = 55;
+    float half = (((width-1)*size_diff) / 2);
+    *(player->X) = -1400;
+    *(player->Y) = -2750;
+    //*(player->Z) = basePos[2] + half;
+    //std::cout << "Start\n";
+    if (diff > 0) {
+        engineServer->ClientCmd("ent_create_portal_weight_box");
+        Sleep(200);
+    }
+    else {
+        float base_x = *(player->X) + 500;
+        float base_y = *(player->Y) + half;
+        float base_z = *(player->Z) + 75;
+        int size_diff = 55;
+
+        float l1i[5] = { 0.515, 0.589, 0.655, 0.720, 0.783 };
+        float l2i[5] = { 0.359, 0.433, 0.504, 0.577, 0.642 };
+        int li = GetClosest(*((player->X) + 0x23), l1i);
+        int lj = GetClosest(*((player->X) + 0x24), l2i);
+
+
+        std::cout << lj << ":" << *((player->X) + 0x24) << " | " << li << ":" << *((player->X) + 0x23) << "\n";
+        
+
+        if (GetAsyncKeyState(0x01) & 1) {
+            FlipPixels(li, lj);
+        }
+
+        if (GetAsyncKeyState('N') & 1) {
+            NewLevel();
+        }
+
+        int index = 0;
+        while (index < (width * height)) {
+            //std::cout << "Setting entity position\n";
+            int i2 = div(index, 5).quot;
+            int j2 = index % 5;
+            float z_coord = (base_z + ((div(index, width).quot) * size_diff));
+            if (!grid[i2][j2]) {
+                z_coord = 5000;
+            }
+            SetEntityPos(base_x, (base_y - ((index % width) * size_diff)), z_coord, entities[index]);
+            //std::cout << *(player->X) << " | " << *(player->Y) << " | " << *(player->Z) << "\n";
+            //SetEntityPos(*(player->X), *(player->Y), *(player->Z)-100, entities[index]);
+            index++;
+        }
+    }
+
+}
+
+
+void InitMiniGame() {
+    std::cout << "start game init\n";
+    basePos[0] = *(player->X);
+    basePos[1] = *(player->Y);
+    basePos[2] = *(player->Z);
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            grid[i][j] = true;
+        }
+    }
+    std::cout << *((player->X) + 0x23) << " | " << *((player->X) + 0x24) << "\n";
+    std::cout << basePos << "\n";
+    std::cout << "finish game init\n";
+}
+
+DWORD WINAPI Test(HMODULE module) {
+    while (true) {
+        //*(camera->X) = 850;
+        //*(camera->Y) = 500;
+        *(camera->Z) = 500;
     }
 }
 
@@ -290,12 +455,56 @@ DWORD WINAPI MyThread(HMODULE module) {
     engineServer = (IVEngineClient*)FindInterface(EngineModule, "VEngineClient014");
     clientEntityList = (IClientEntityList*)FindInterface(ClientModule, "VClientEntityList003");
 
+    const char* networkPosPattern = "55 8B EC 8B 45 08 D9 00 D9 99 34 03 00 00 D9 40 04 D9 99 38 03 00 00 D9 40 08 D9 99 3C 03 00 00 5D C2 04 00";
+    std::uint8_t* ps = PatternScan(GetModuleHandleW(L"client.dll"), networkPosPattern);
+
+    const char* setPosPattern = "55 8B EC 56 57 8B F1 E8 ? ? ? ? 8B 7D 08 F3 0F 10 07 0F 2E 86 ? ? ? ?";
+    SetAbsOriginFunc = (SetAbsOriginType)PatternScan(GetModuleHandleW(L"client.dll"), setPosPattern);
+
+    const char* setLocalPattern = "55 8B EC 56 57 8B 7D 08 8B F1 F3 0F 10 07 0F 2E 86 8C 02 00 00 9F";
+    SetLocalOriginFunc = (SetAbsOriginType)PatternScan(GetModuleHandleW(L"client.dll"), setLocalPattern);
+
+    const char* serverLocalPattern = "55 8B EC F3 0F 10 ? ? ? ? ? 83 EC 10 0F 28 C1 0F 57 05 ? ? ? ? 56 8B 75 08 57 8B F9 F3 0F 10 16";
+    auto sp = SecondPattern(GetModuleHandleW(L"server.dll"), serverLocalPattern);
+    SetServerOriginFunc = (SetAbsOriginType)sp;
+
+    std::cout << "start model nbame\n";
+
+    const char* modelNamePattern = "8B 81 94 01 00 00 C3";
+    //auto mp = PatternScan(GetModuleHandleW(L"client.dll"), modelNamePattern);
+    //GetModelFunc = (GetModelType)mp;
+
+    //std::cout << "funish model name" << mp << "\n";
+
+
+    std::cout << "Pattern scan: " << (int*)sp << "\n";
+
+    SetNetOriginFunc = (SetNetOriginType)ps;
+
     bool onWall = false;
     bool isLoading = false;
+    bool miniGame = false;
+    bool gameIsInit = false;
     InitialisePointers();
 
     // Main loop
-    while (true) {
+    while (!(GetAsyncKeyState('9') & 1)) {
+        if (miniGame && !isLoading && !gameIsInit) {
+            DisplayGrid();
+        }
+        if (miniGame && gameIsInit && !isLoading) {
+            InitMiniGame();
+            gameIsInit = false;
+        }
+        if (GetAsyncKeyState('T') & 1) {
+            miniGame = !miniGame;
+            if (miniGame && !gameIsInit) {
+                gameIsInit = true;
+                isLoading = true;
+                engineServer->ClientCmd("map testchmb_a_10");
+                Sleep(10);
+            }
+        }
         if (!engineServer->IsInGame()) {
             std::cout << "Loading\n";
         }
@@ -306,12 +515,15 @@ DWORD WINAPI MyThread(HMODULE module) {
         else if (engineServer->IsInGame() && isLoading && !engineServer->IsDrawingLoadingImage()) {
             std::cout << "finish load\n";
             isLoading = false;
-            Sleep(500);
+            Sleep(3000);
             InitialisePointers();
         }
         if (GetAsyncKeyState('K') & 1) { // Execute the get entities function
             std::cout << "K pressed\n";
             GetAllEntities();
+        }
+        if (GetAsyncKeyState('J') & 1) { // Execute the get entities function
+            std::cout << "x coord " << player->X << "\n";
         }
        /* if (*(player->onWall) == 1 && !onWall) {
             onWall = true;

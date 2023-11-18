@@ -1,74 +1,198 @@
-// dllmain.cpp : Defines the entry point for the DLL application.
+/**
+* This file is the entry point for the Portal hack DLL.
+*/
+#pragma once
 #include "pch.h"
 #include <iostream>
 #include <Windows.h>
+#include <shared_mutex>
+#include "IVEngineServer.h"
+#include "IVEngineClient.h"
 
-const float SUPER_SPRINT_SF = 1.2f;
+// Used as the signature for the exported CreateInterface function 
+typedef void* (__cdecl* CreateInterfaceType)(const char* name, int* returnCode);
 
+
+IVEngineClient* engineClient;
+IVEngineServer* engineServer;
+
+/**
+* Represents a 3D vector
+*/
+class Vector3 {
+public:
+    float* x;
+    float* y;
+    float* z;
+};
+
+/**
+* A wrapper for pointers to various fields on the player object.
+*/
+class Player {
+public:
+    Vector3* position;
+    Vector3* velocity;
+    int* onWall;
+    bool flying;
+    Player() {
+        position = new Vector3();
+        velocity = new Vector3();
+        flying = false;
+    }
+};
+
+/**
+* A wrapper for pointers to various fields on the portal gun object.
+*/
+class PortalGun {
+public:
+    int* linkID;
+};
+
+// Switches the portal linkage ID
+void switchPortalID(int* portalId) {
+    if (GetAsyncKeyState('1') & 1) {
+        *portalId = 0;
+    }
+    else if (GetAsyncKeyState('2') & 1) {
+        *portalId = 1;
+    }
+    else if (GetAsyncKeyState('3') & 1) {
+        *portalId = 2;
+    }
+    else if (GetAsyncKeyState('4') & 1) {
+        *portalId = 3;
+    }
+    else if (GetAsyncKeyState('5') & 1) {
+        *portalId = 4;
+    }
+    else if (GetAsyncKeyState('6') & 1) {
+        *portalId = 5;
+    }
+    else if (GetAsyncKeyState('7') & 1) {
+        *portalId = 6;
+    }
+    else if (GetAsyncKeyState('8') & 1) {
+        *portalId = 7;
+    }
+    else if (GetAsyncKeyState('9') & 1) {
+        *portalId = 8;
+    }
+    else if (GetAsyncKeyState('0') & 1) {
+        *portalId = 9;
+    }
+}
+
+void* FindInterface(HMODULE dll, const char* name) {
+    auto a = GetProcAddress(dll, "CreateInterface");
+    if (a == NULL) {
+        std::cout << "Interface does not exist.\n";
+    }
+    CreateInterfaceType CreateInterfaceFunction = (CreateInterfaceType)a;
+    std::cout << "Got factory.\n";
+
+    int returnCode = 0;
+    void* interface = CreateInterfaceFunction(name, &returnCode);
+
+    return interface;
+}
 
 DWORD WINAPI MyThread(HMODULE module) {
     AllocConsole();
     FILE* f = new FILE;
     freopen_s(&f, "CONOUT$", "w", stdout);
 
-    std::cout << "Injection active\n";
+    std::cout << "Injection successful!\n";
 
-    uintptr_t ClientPtr = (uintptr_t)GetModuleHandle(L"client.dll");
-    uintptr_t firstStep = *(uintptr_t*)(ClientPtr + 0x004EAAC4);
-    uintptr_t secondStep = *(uintptr_t*)(firstStep + 0xC);
-    uintptr_t thirdStep = *(uintptr_t*)(secondStep + 0x80);
-    uintptr_t fourthStep = *(uintptr_t*)(thirdStep + 0x4);
-    uintptr_t fifthStep = *(uintptr_t*)(fourthStep + 0x2A4);
-    float* camera_x = (float*)(fifthStep + 0x334);
-    float* camera_y = (float*)(fifthStep + 0x338);
-    float* camera_z = (float*)(fifthStep + 0x33C);
 
-    uintptr_t ServerPtr = (uintptr_t)GetModuleHandle(L"server.dll");
-    uintptr_t fS = *(uintptr_t*)(ServerPtr + 0x006E4E94);
-    float* playerVelocityX = (float*)(fS + 0x214);
-    float* playerVelocityY = (float*)(fS + 0x218);
-    float* playerVelocityZ = (float*)(fS + 0x21C);
-    float* playerX = (float*)(fS + 0x304);
-    float* playerY = (float*)(fS + 0x308);
-    float* playerZ = (float*)(fS + 0x30C);
+    // Get pointers to the physics.dll and server.dll modules
+    uintptr_t physics = (uintptr_t)GetModuleHandle(L"vphysics.dll");
+    uintptr_t server = (uintptr_t)GetModuleHandle(L"server.dll");
+
+    engineClient = (IVEngineClient*)FindInterface(GetModuleHandle(L"engine.dll"), "VEngineClient014");
+    engineServer = (IVEngineServer*)FindInterface(GetModuleHandle(L"engine.dll"), "VEngineServer021");
+
+    // A pointer to a memory region containing numerous player object fields
+    uintptr_t playerRegion = *(uintptr_t*)(server + 0x006E4E94);
+   
+    Player* player = new Player();
+
+    // Wrap fields in our player class
+    player->velocity->x = (float*)(playerRegion + 0x214);
+    player->velocity->y = (float*)(playerRegion + 0x218);
+    player->velocity->z = (float*)(playerRegion + 0x21C);
+    
+    player->position->x = (float*)(playerRegion + 0x304);
+    player->position->y = (float*)(playerRegion + 0x308);
+    player->position->z = (float*)(playerRegion + 0x30C);
+
+    // Pointer to the portal gun's ID
+    uintptr_t s1 = *(uintptr_t*)(server + 0x006DD15C);
+    uintptr_t s2 = *(uintptr_t*)(s1 + 0X0);
+    uintptr_t s3 = *(uintptr_t*)(s2 + 0x50);
+    uintptr_t s4 = *(uintptr_t*)(s3 + 0x13C);
+    uintptr_t s5 = *(uintptr_t*)(s4 + 0x14);
+    uintptr_t s6 = *(uintptr_t*)(s5 + 0x18);
+    uintptr_t s7 = *(uintptr_t*)(s6 + 0xC);
+    
+    PortalGun* portalGun = new PortalGun();
+    portalGun->linkID = (int*)(s7 + 0x598);
+
+    // Is player on wall
+    uintptr_t t1 = *(uintptr_t*)(physics + 0x00D492C);
+    uintptr_t t2 = *(uintptr_t*)(t1 + 0x0);
+    uintptr_t t3 = *(uintptr_t*)(t2 + 0xB0);
+    uintptr_t t4 = *(uintptr_t*)(t3 + 0x4);
+
+    player->onWall = (int*)(t4 + 0x104);
 
     float targetZ = 0.0f;
-    bool levitating = false;
-    bool superSprint = false;
 
+    // mod portal hack to autoincrement id
+    // check cheatengine for wall flag
     while (true) {
-        if (levitating) {
-            if (*playerZ < targetZ) {
-                *playerVelocityZ = 200.0f;
+        switchPortalID(portalGun->linkID);
+
+        if (player->flying) {
+            // If the player is below the target height, increase their vertical velocity
+            if (*player->position->z < targetZ) {
+                *player->velocity->z = 200.0f;
             }
             else {
-                *playerVelocityZ = 0.0f;
+                *player->velocity->z = 0.0f;
             }
         }
         
-        if (superSprint) {
-            *playerVelocityX *= SUPER_SPRINT_SF;
-            *playerVelocityY *= SUPER_SPRINT_SF;
+        // Super jump if e pressed
+        if (GetAsyncKeyState(VK_SPACE) & 1) {    
+            std::cout << "used super jump\n";
+            *player->velocity->z = 500.0f;
         }
 
-        if (GetAsyncKeyState('G') & 1) {    // scale player velocity for sprint if g pressed
-            superSprint = !superSprint;
-
-            std::cout << "super sprint: ";
-            std::cout << superSprint;
-        }
-        
-        if (GetAsyncKeyState('J') & 1) {    // Super jump if j pressed
-            std::cout << "super jump";
-            *playerVelocityZ = 500.0f;
+        if (GetAsyncKeyState('C')) {
+            std::cout << "Pressed C";
+            engineClient->ClientCmd("ent_create_portal_weight_box"); // Executes a game console command
+            while (GetAsyncKeyState('C')) {
+                Sleep(1);
+            }
         }
 
-        if (GetAsyncKeyState('C') & 1) { // Levitate if c pressed
-            levitating = !levitating;
-            targetZ = *playerZ + 30.0f;
+        if (GetAsyncKeyState('L')) {
+            const char* lvlName = engineClient->GetLevelName();
+            std::cout << lvlName;
+            std::cout << *lvlName
+            //engineServer->ChangeLevel('1', '1');
+        }
 
-            std::cout << "levitate: ";
-            std::cout << levitating;
+        // Levitate if c pressed
+        if (GetAsyncKeyState('F') & 1) { 
+            player->flying = !player->flying;
+            targetZ = *player->position->z + 30.0f;
+
+            std::cout << "flying: ";
+            std::cout << player->flying;
+            std::cout << "\n";
         }
     }
 

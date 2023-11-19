@@ -33,7 +33,7 @@
     <ClInclude Include="IVEngineClient.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="globalValues.h">
+    <ClInclude Include="dllmain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GetEntityList.h">
@@ -44,19 +44,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="portal_hack.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ControlWindow.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="patternMatching.cpp">
+    <ClCompile Include="PatternMatching.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

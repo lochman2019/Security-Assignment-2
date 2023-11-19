@@ -5,23 +5,137 @@
 #include <shared_mutex>
 #include "IVEngineServer.h"
 #include "IVEngineClient.h"
-#include "globalValues.h"
+#include "dllmain.h"
 #include "GetEntityList.h"
 #include <vector>
+
 using namespace std;
 
-HackVariables* hackVars = new HackVariables();
+/**
+* Represents a 3D vector
+*/
+class Vector3 {
+public:
+    float* x;
+    float* y;
+    float* z;
+};
+
+/**
+* A wrapper for pointers to various fields on the player object.
+*/
+class Player {
+    HMODULE serverModule;
+public:
+    Vector3* position;
+    Vector3* velocity;
+    bool flying;
+
+    Player(HMODULE serverModule) {
+        position = new Vector3();
+        velocity = new Vector3();
+        flying = false;
+        this->serverModule = serverModule;
+        this->ReloadPointers();
+    }
+
+    /**
+    * Gets pointers to necessary playervalues from the Portal process
+    */
+    void ReloadPointers() {
+        uintptr_t server = (uintptr_t) this->serverModule;
+
+        // A pointer to a memory region containing numerous player object fields
+        uintptr_t playerRegion = *(uintptr_t*)(server + 0x006E4E94);
+
+        // Wrap fields in our player class
+        this->velocity->x = (float*)(playerRegion + 0x214);
+        this->velocity->y = (float*)(playerRegion + 0x218);
+        this->velocity->z = (float*)(playerRegion + 0x21C);
+
+        this->position->x = (float*)(playerRegion + 0x304);
+        this->position->y = (float*)(playerRegion + 0x308);
+        this->position->z = (float*)(playerRegion + 0x30C);
+
+    }
+};
+
+/**
+* A wrapper for pointers to various fields on the portal gun object.
+*/
+class PortalGun {
+    HMODULE serverModule;
+public:
+    int* linkID;
+
+    PortalGun(HMODULE serverModule) {
+        this->serverModule = serverModule;
+        this->ReloadPointers();
+    }
+
+    /**
+    * Gets pointers to necessary portal gun values from the Portal process
+    */
+    void ReloadPointers() {
+        uintptr_t server = (uintptr_t) this->serverModule;
+
+        // Get a pointer to the PortalGun ID
+        uintptr_t s1 = *(uintptr_t*)(server + 0x006DD15C);
+        uintptr_t s2 = *(uintptr_t*)(s1 + 0X0);
+        uintptr_t s3 = *(uintptr_t*)(s2 + 0x50);
+        uintptr_t s4 = *(uintptr_t*)(s3 + 0x13C);
+        uintptr_t s5 = *(uintptr_t*)(s4 + 0x14);
+        uintptr_t s6 = *(uintptr_t*)(s5 + 0x18);
+        uintptr_t s7 = *(uintptr_t*)(s6 + 0xC);
+
+        this->linkID = (int*)(s7 + 0x598);
+    }
+};
+
+/**
+* State for the hack controller window.
+*/
+struct WindowState {
+    HINSTANCE global_hInstance;
+
+    HWND superJumpEnabled;
+    HWND multiPortalEnabled;
+    HWND weightBoxSpawnEnabled;
+
+    HWND superJumpLabel;
+    HWND multiPortalLabel;
+    HWND weightBoxSpawnLabel;
+};
+
+/**
+* Stores the current state of different hacks.
+* Used to allow the hacks to be controlled by the window
+*/
+struct HackState {
+    bool superJump = false;
+    bool multiPortals = false;
+    bool weightBoxSpawn = false;
+};
+
+HackState* hackState = new HackState();
 SRWLOCK srwlock = SRWLOCK_INIT;
-WindowVairables* windowVars = new WindowVairables();
-Player* player = new Player();
-Camera* camera = new Camera();
-PortalGun* portalGun = new PortalGun();
+
+WindowState* windowState = new WindowState();
+
+
+//Sets up a wrapper class for the player and portal gun that will load pointers to the necessary memory locations.
+Player* player = new Player(GetModuleHandle(L"server.dll"));
+PortalGun* portalGun = new PortalGun(GetModuleHandle(L"server.dll"));
+
+// Various game engine functions
 IVEngineClient* engineServer;
 IClientEntityList* clientEntityList;
+
 SetAbsOriginType SetAbsOriginFunc;
 SetNetOriginType SetNetOriginFunc;
 SetAbsOriginType SetLocalOriginFunc;
 SetAbsOriginType SetServerOriginFunc;
+
 GetModelType GetModelFunc;
 
 float basePos[3] = { 0, 0, 0 };
@@ -31,18 +145,12 @@ uint8_t* SecondPattern(void* module, const char* signature);
 
 bool grid[5][5] = {};
 
-//void CBaseEntity::SetAbsOriginFunc(float* origin) {
-//    using SetAbsOriginType = void(__thiscall*)(void*, float* origin);
-//    static SetAbsOriginType SetAbsOrigin = (SetAbsOriginType)PatternScan()
-//}
-
 void* FindInterface(HMODULE dll, const char* name) {
     auto a = GetProcAddress(dll, "CreateInterface");
     if (a == NULL) {
-        std::cout << "IT'S NULL\n";
+        std::cout << "Couldn't load interface" << name << "\n";
     }
     CreateInterfaceType CreateInterfaceFunction = (CreateInterfaceType)a;
-    std::cout << "Got factory\n";
 
     int returnCode = 0;
     void* interface = CreateInterfaceFunction(name, &returnCode);
@@ -50,44 +158,124 @@ void* FindInterface(HMODULE dll, const char* name) {
     return interface;
 }
 
-// Changes the state of the necessary label 
+/**
+*Changes the text of a passed label based on some state
+*/
 void ChangeOnOff(HWND* wnd, bool state) { 
     if (state) {
-        SetWindowText(*wnd, L"Off");
-    }
-    else {
         SetWindowText(*wnd, L"On");
     }
-    ShowWindow(*wnd, SW_HIDE);
-    ShowWindow(*wnd, SW_SHOW);
-}
+    else {
+        SetWindowText(*wnd, L"Off");
+    }
+    UpdateWindow(*wnd);
 
+}
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
     case WM_CREATE:
         // Creates the labels for the buttons
-        windowVars->on_off1 = CreateWindow(L"Static", L"Off", WS_CHILD | WS_VISIBLE, 125, 10, 175, 30, hwnd, 0, windowVars->global_hInstance, 0);
-        windowVars->on_off2 = CreateWindow(L"Static", L"Off", WS_CHILD | WS_VISIBLE, 125, 50, 175, 30, hwnd, 0, windowVars->global_hInstance, 0);
-        windowVars->label1 = CreateWindow(L"Static", L"| Jump hack - Press F for up and G for down", WS_CHILD | WS_VISIBLE, 300, 10 , 400, 30, hwnd, 0, windowVars->global_hInstance, 0);
-        windowVars->label2 = CreateWindow(L"Static", L"| Portal hack - Press 1-9 for different Portal pairs", WS_CHILD | WS_VISIBLE, 300, 50, 400, 30, hwnd, 0, windowVars->global_hInstance, 0);
+        windowState->superJumpEnabled = CreateWindow(
+            L"Static",
+            L"Off",
+            WS_CHILD | WS_VISIBLE,
+            220,
+            10,
+            50,
+            30,
+            hwnd,
+            0,
+            windowState->global_hInstance, 
+            0
+        );
+
+        windowState->multiPortalEnabled = CreateWindow(
+            L"Static",
+            L"Off",
+            WS_CHILD | WS_VISIBLE,
+            220,
+            50,
+            50,
+            30,
+            hwnd,
+            0,
+            windowState->global_hInstance,
+            0
+        );
+
+        windowState->weightBoxSpawnEnabled = CreateWindow(
+            L"Static",
+            L"Off",
+            WS_CHILD | WS_VISIBLE,
+            220,
+            90,
+            50,
+            30,
+            hwnd,
+            0,
+            windowState->global_hInstance,
+            0
+        );
+
+        windowState->superJumpLabel = CreateWindow(
+            L"Static",
+            L"Press Space to super jump",
+            WS_CHILD | WS_VISIBLE,
+            280,
+            10,
+            290,
+            30,
+            hwnd,
+            0, windowState->global_hInstance, 
+            0
+        );
+
+        windowState->multiPortalLabel = CreateWindow(
+            L"Static",
+            L"Press 1-9 to use extra portals",
+            WS_CHILD | WS_VISIBLE,
+            280,
+            50,
+            290,
+            30,
+            hwnd,
+            0,
+            windowState->global_hInstance, 
+            0
+        );
+
+        windowState->weightBoxSpawnLabel = CreateWindow(
+            L"Static",
+            L"Press C to create a weighted box",
+            WS_CHILD | WS_VISIBLE,
+            280,
+            90,
+            290,
+            30,
+            hwnd,
+            0,
+            windowState->global_hInstance, 
+            0
+        );
 
     case WM_COMMAND:
-        std::cout << "command called\n";
-        std::cout << wParam;
-        if (LOWORD(wParam) == LOWORD(L"Button1")) {
-            // perform actions here
-            std::cout << "Button1 pressed\n";
+        if (LOWORD(wParam) == LOWORD(L"SuperJumpEnabled")) {
             AcquireSRWLockExclusive(&srwlock);
-            ChangeOnOff(&windowVars->on_off1, hackVars->jumpHack);
-            hackVars->jumpHack = !(hackVars->jumpHack);
+            hackState->superJump = !(hackState->superJump);
+            ChangeOnOff(&windowState->superJumpEnabled, hackState->superJump);
             ReleaseSRWLockExclusive(&srwlock);
         }
-        else if (LOWORD(wParam) == LOWORD(L"Button2")) {
-            std::cout << "Button2 pressed\n";
+        else if (LOWORD(wParam) == LOWORD(L"PortalsEnabled")) {
             AcquireSRWLockExclusive(&srwlock);
-            ChangeOnOff(&windowVars->on_off2, hackVars->multiplePortalsHack);
-            hackVars->multiplePortalsHack = !(hackVars->multiplePortalsHack);
+            hackState->multiPortals = !(hackState->multiPortals);
+            ChangeOnOff(&windowState->multiPortalEnabled, hackState->multiPortals);
+            ReleaseSRWLockExclusive(&srwlock);
+        }
+        else if (LOWORD(wParam) == LOWORD(L"CubesEnabled")) {
+            AcquireSRWLockExclusive(&srwlock);
+            hackState->weightBoxSpawn = !(hackState->weightBoxSpawn);
+            ChangeOnOff(&windowState->weightBoxSpawnEnabled, hackState->weightBoxSpawn);
             ReleaseSRWLockExclusive(&srwlock);
         }
         break;
@@ -116,51 +304,85 @@ void CreateNewWindow(HINSTANCE hInstance) {
 
     // Create the window
     HWND hwnd = CreateWindowEx(
-        0,                              // Optional window styles
-        CLASS_NAME,                     // Window class
-        L"Portal Hack Controller",                   // Window text
-        WS_OVERLAPPEDWINDOW,            // Window style
+        0,                              
+        CLASS_NAME,                     
+        L"Portal Hack Controller",             
+        WS_OVERLAPPEDWINDOW,          
 
-        // Size and position
-        CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+        // Window position
+        CW_USEDEFAULT, 
+        CW_USEDEFAULT,
 
-        NULL,       // Parent window
-        NULL,       // Menu
-        hInstance,  // Instance handle
-        NULL        // Additional application data
-    ); // Creates a new window
+        // Window size
+        600, 
+        250,
+
+        NULL,       
+        NULL,       
+        hInstance,  
+        NULL        
+    ); 
 
     if (hwnd == NULL) {
         MessageBox(NULL, L"Window creation failed", L"Error", MB_ICONERROR);
         return;
     }
 
-    HWND button1 = CreateWindow(
+    // Create hack config buttons
+    HWND superJumpButton = CreateWindow(
         L"BUTTON",
-        L"Toggle",
+        L"Toggle Super Jump",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
         10,
         10,
-        100,
+        200,
         30,
         hwnd,
-        (HMENU)L"Button1",
+        (HMENU)L"SuperJumpEnabled",
         hInstance,
         NULL
-    ); // Creates a new button
+    ); 
 
-    HWND button2 = CreateWindow(
+    HWND multiPortalButton = CreateWindow(
         L"BUTTON",
-        L"Toggle",
+        L"Toggle Multi-Portals",
         WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
         10,
         50,
-        100,
+        200,
         30,
         hwnd,
-        (HMENU)L"Button2",
+        (HMENU)L"PortalsEnabled",
         hInstance,
         NULL
+    );
+
+    HWND weightBoxButton = CreateWindow(
+        L"BUTTON",
+        L"Toggle Cube Spawning",
+        WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+        10,
+        90,
+        200,
+        30,
+        hwnd,
+        (HMENU)L"CubesEnabled",
+        hInstance,
+        NULL
+    );
+
+    CreateWindow(
+        L"Static",
+        L"Press T to enter the 'Lights Out' minigame.",
+        WS_CHILD | WS_VISIBLE,
+        10,
+        130,
+        450,
+        30,
+        hwnd,
+        0,
+        hInstance,
+        0
     );
 
     ShowWindow(hwnd, SW_SHOWDEFAULT);
@@ -173,8 +395,9 @@ void CreateNewWindow(HINSTANCE hInstance) {
     }
 }
 
-
-// Switches the portal linkage ID
+/**
+* Switches the portal gun's linkage ID based on user input.
+*/ 
 void PortalIDSwitch(int* portalId) {
     if (GetAsyncKeyState('1') & 1) {
         *portalId = 0;
@@ -208,51 +431,6 @@ void PortalIDSwitch(int* portalId) {
     }
 }
 
-void InitialisePointers() {
-    std::cout << "Start initialise\n";
-    // Get pointer to Camera object
-    uintptr_t firstStep = *(uintptr_t*)(ClientPtr + 0x004EAAC4);
-    uintptr_t secondStep = *(uintptr_t*)(firstStep + 0xC);
-    uintptr_t thirdStep = *(uintptr_t*)(secondStep + 0x80);
-    uintptr_t fourthStep = *(uintptr_t*)(thirdStep + 0x4);
-    uintptr_t fifthStep = *(uintptr_t*)(fourthStep + 0x2A4);
-    camera->X = (float*)(fifthStep + 0x334);
-    camera->Y = (float*)(fifthStep + 0x338);
-    camera->Z = (float*)(fifthStep + 0x33C);
-    std::cout << "Got camera\n";
-
-    // Player coordinates
-    uintptr_t fS = *(uintptr_t*)(ServerPtr + 0x006E4E94);
-    player->X = (float*)(fS + 0x304);
-    player->Y = (float*)(fS + 0x308);
-    player->Z = (float*)(fS + 0x30C);
-    std::cout << "Got player\n";
-
-    // Pointer to PortalGun ID
-    uintptr_t s1 = *(uintptr_t*)(ServerPtr + 0x006DD15C);
-    uintptr_t s2 = *(uintptr_t*)(s1 + 0X0);
-    uintptr_t s3 = *(uintptr_t*)(s2 + 0x50);
-    uintptr_t s4 = *(uintptr_t*)(s3 + 0x13C);
-    uintptr_t s5 = *(uintptr_t*)(s4 + 0x14);
-    uintptr_t s6 = *(uintptr_t*)(s5 + 0x18);
-    uintptr_t s7 = *(uintptr_t*)(s6 + 0xC);
-    std::cout << "Starting final step\n";
-    portalGun->linkID = (int*)(s7 + 0x598);
-    std::cout << "Got portal gun\n";
-
-    // Is player on wall
-    uintptr_t t1 = *(uintptr_t*)(PhysicsPtr + 0x00D492C);
-    uintptr_t t2 = *(uintptr_t*)(t1 + 0x0);
-    uintptr_t t3 = *(uintptr_t*)(t2 + 0xB0);
-    uintptr_t t4 = *(uintptr_t*)(t3 + 0x4);
-
-    player->onWall = (int*)(t4 + 0x104);
-
-
-    
-    std::cout << "Initialised\n";
-}
-
 void SetEntityPos(float x, float y, float z, void* ent) {
     float* x_coord = (float*)ent + 0x97;
     float* y_coord = (float*)ent + 0x97 + 0x1;
@@ -264,14 +442,17 @@ void SetEntityPos(float x, float y, float z, void* ent) {
     float angle[3] = { 0, 0, 0 };
     float vel[3] = { 0, 0, 0 };
     //SetAbsOriginFunc((int*)ent, origin);
-    SetNetOriginFunc((int*)ent, origin);
-    SetAbsOriginFunc((int*)ent, origin);
+    SetNetOriginFunc((int*) ent, origin);
+    SetAbsOriginFunc((int*) ent, origin);
     *roll = 0;
     *pitch = 0;
     *yaw = 0;
 }
 
-vector<void*> GetAllEntities() { // Gets all entities of the weighted box type in the world
+/**
+* Gets all entities of the weighted box type in the world
+*/
+vector<void*> GetAllEntities() {
     int h_i = clientEntityList->GetHighestEntityIndex(); // Get the highest index currently in use
     vector<void*> entities = {};
     int i = 0;
@@ -282,9 +463,8 @@ vector<void*> GetAllEntities() { // Gets all entities of the weighted box type i
         if ((current = clientEntityList->GetClientEntity(i)) != 0x0) { // Iterate through the entity list, filter out null
             int* e_id = (int*)(((int*)current) + 0x1D);
 
-            //auto name = GetModelFunc((int*)current);
             auto name = " ";
-            //std::cout << "index: " << i << " | address: " << current << " | id : " << e_id << " | id_a : " << *e_id << " | name: " << name << "\n";
+
             if (*e_id == 257) { // Check if the entity is a weighted box
                 int a1 = *(((float*)current) + 0x68) * 100;
                 int a2 = *(((float*)current) + 0x69) * 100;
@@ -302,8 +482,7 @@ vector<void*> GetAllEntities() { // Gets all entities of the weighted box type i
         i++;
 
     }
-    //std::cout << "count " << c << "\n";
-   // std::cout << "sioze " << entities.size() << "\n";
+
     return entities;
 }
 
@@ -360,27 +539,27 @@ void DisplayGrid() {
     int diff = (width * height) - entities.size();
     int size_diff = 55;
     float half = (((width-1)*size_diff) / 2);
-    *(player->X) = -1400;
-    *(player->Y) = -2750;
-    //*(player->Z) = basePos[2] + half;
-    //std::cout << "Start\n";
-    if (diff > 0) {
+
+    *(player->position->x) = -1400;
+    *(player->position->y) = -2750;
+
+        if (diff > 0) {
         engineServer->ClientCmd("ent_create_portal_weight_box");
         Sleep(200);
     }
     else {
-        float base_x = *(player->X) + 500;
-        float base_y = *(player->Y) + half;
-        float base_z = *(player->Z) + 75;
+        float base_x = *(player->position->x) + 500;
+        float base_y = *(player->position->y) + half;
+        float base_z = *(player->position->z) + 75;
         int size_diff = 55;
 
         float l1i[5] = { 0.515, 0.589, 0.655, 0.720, 0.783 };
         float l2i[5] = { 0.359, 0.433, 0.504, 0.577, 0.642 };
-        int li = GetClosest(*((player->X) + 0x23), l1i);
-        int lj = GetClosest(*((player->X) + 0x24), l2i);
+        int li = GetClosest(*((player->position->x) + 0x23), l1i);
+        int lj = GetClosest(*((player->position->x) + 0x24), l2i);
 
 
-        std::cout << lj << ":" << *((player->X) + 0x24) << " | " << li << ":" << *((player->X) + 0x23) << "\n";
+        std::cout << lj << ":" << *((player->position->x) + 0x24) << " | " << li << ":" << *((player->position->x) + 0x23) << "\n";
         
 
         if (GetAsyncKeyState(0x01) & 1) {
@@ -393,16 +572,15 @@ void DisplayGrid() {
 
         int index = 0;
         while (index < (width * height)) {
-            //std::cout << "Setting entity position\n";
-            int i2 = div(index, 5).quot;
+            int i2 = div(index, 5)
+                .quot;
             int j2 = index % 5;
             float z_coord = (base_z + ((div(index, width).quot) * size_diff));
             if (!grid[i2][j2]) {
                 z_coord = 5000;
             }
             SetEntityPos(base_x, (base_y - ((index % width) * size_diff)), z_coord, entities[index]);
-            //std::cout << *(player->X) << " | " << *(player->Y) << " | " << *(player->Z) << "\n";
-            //SetEntityPos(*(player->X), *(player->Y), *(player->Z)-100, entities[index]);
+           
             index++;
         }
     }
@@ -412,26 +590,19 @@ void DisplayGrid() {
 
 void InitMiniGame() {
     std::cout << "start game init\n";
-    basePos[0] = *(player->X);
-    basePos[1] = *(player->Y);
-    basePos[2] = *(player->Z);
+    basePos[0] = *(player->position->x);
+    basePos[1] = *(player->position->y);
+    basePos[2] = *(player->position->z);
     for (int i = 0; i < 5; i++) {
         for (int j = 0; j < 5; j++) {
             grid[i][j] = true;
         }
     }
-    std::cout << *((player->X) + 0x23) << " | " << *((player->X) + 0x24) << "\n";
+    std::cout << *((player->position->x) + 0x23) << " | " << *((player->position->x) + 0x24) << "\n";
     std::cout << basePos << "\n";
     std::cout << "finish game init\n";
 }
 
-DWORD WINAPI Test(HMODULE module) {
-    while (true) {
-        //*(camera->X) = 850;
-        //*(camera->Y) = 500;
-        *(camera->Z) = 500;
-    }
-}
 
 DWORD WINAPI MyThread(HMODULE module) {
     AllocConsole();
@@ -440,21 +611,11 @@ DWORD WINAPI MyThread(HMODULE module) {
 
     std::cout << "Injection active\n";
 
-    // DLLs
-    ClientModule = GetModuleHandle(L"client.dll");
-    ServerModule = GetModuleHandle(L"server.dll");
-    EngineModule = GetModuleHandle(L"engine.dll");
-    PhysicsModule = GetModuleHandle(L"vphysics.dll");
+    // Load interfaces for the engine client and client entity list
+    engineServer = (IVEngineClient*)FindInterface(GetModuleHandle(L"engine.dll"), "VEngineClient014");
+    clientEntityList = (IClientEntityList*)FindInterface(GetModuleHandle(L"client.dll"), "VClientEntityList003");
 
-    ClientPtr = (uintptr_t)ClientModule;
-    ServerPtr = (uintptr_t)ServerModule;
-    EnginePtr = (uintptr_t)EngineModule;
-    PhysicsPtr = (uintptr_t)PhysicsModule;
-
-    // Interface for client engine
-    engineServer = (IVEngineClient*)FindInterface(EngineModule, "VEngineClient014");
-    clientEntityList = (IClientEntityList*)FindInterface(ClientModule, "VClientEntityList003");
-
+    // Identify entity functions
     const char* networkPosPattern = "55 8B EC 8B 45 08 D9 00 D9 99 34 03 00 00 D9 40 04 D9 99 38 03 00 00 D9 40 08 D9 99 3C 03 00 00 5D C2 04 00";
     std::uint8_t* ps = PatternScan(GetModuleHandleW(L"client.dll"), networkPosPattern);
 
@@ -465,30 +626,19 @@ DWORD WINAPI MyThread(HMODULE module) {
     SetLocalOriginFunc = (SetAbsOriginType)PatternScan(GetModuleHandleW(L"client.dll"), setLocalPattern);
 
     const char* serverLocalPattern = "55 8B EC F3 0F 10 ? ? ? ? ? 83 EC 10 0F 28 C1 0F 57 05 ? ? ? ? 56 8B 75 08 57 8B F9 F3 0F 10 16";
-    auto sp = SecondPattern(GetModuleHandleW(L"server.dll"), serverLocalPattern);
+    auto sp = (SetAbsOriginType)SecondPattern(GetModuleHandleW(L"server.dll"), serverLocalPattern);
     SetServerOriginFunc = (SetAbsOriginType)sp;
 
-    std::cout << "start model nbame\n";
-
     const char* modelNamePattern = "8B 81 94 01 00 00 C3";
-    //auto mp = PatternScan(GetModuleHandleW(L"client.dll"), modelNamePattern);
-    //GetModelFunc = (GetModelType)mp;
-
-    //std::cout << "funish model name" << mp << "\n";
-
-
-    std::cout << "Pattern scan: " << (int*)sp << "\n";
 
     SetNetOriginFunc = (SetNetOriginType)ps;
 
-    bool onWall = false;
     bool isLoading = false;
     bool miniGame = false;
     bool gameIsInit = false;
-    InitialisePointers();
 
     // Main loop
-    while (!(GetAsyncKeyState('9') & 1)) {
+    while (true) {
         if (miniGame && !isLoading && !gameIsInit) {
             DisplayGrid();
         }
@@ -505,75 +655,48 @@ DWORD WINAPI MyThread(HMODULE module) {
                 Sleep(10);
             }
         }
-        if (!engineServer->IsInGame()) {
-            std::cout << "Loading\n";
-        }
+        
         if (!engineServer->IsInGame() && !isLoading) {
-            std::cout << "start load\n";
             isLoading = true;
         }
         else if (engineServer->IsInGame() && isLoading && !engineServer->IsDrawingLoadingImage()) {
-            std::cout << "finish load\n";
             isLoading = false;
             Sleep(3000);
-            InitialisePointers();
+            
+            // Rerun the player and portal gun pointer paths in case anything has changed
+            player->ReloadPointers();
+            portalGun->ReloadPointers();
         }
-        if (GetAsyncKeyState('K') & 1) { // Execute the get entities function
-            std::cout << "K pressed\n";
-            GetAllEntities();
-        }
-        if (GetAsyncKeyState('J') & 1) { // Execute the get entities function
-            std::cout << "x coord " << player->X << "\n";
-        }
-       /* if (*(player->onWall) == 1 && !onWall) {
-            onWall = true;
-            std::cout << "Player is on wall\n";
-        }
-        else if (*(player->onWall) != 1 && onWall) {
-            std::cout << *(player->onWall);
-            std::cout << "\n";
-            onWall = false;
-            std::cout << "Player is off wall\n";
-        }*/
-        // Gets a lock to read the global hackVars 
+
+        // Gets a lock to read the global hack state 
         AcquireSRWLockShared(&srwlock);
+
         // Checks if different hacks are active
-        if (hackVars->jumpHack) {
-            if (GetAsyncKeyState('F') & 1) { //Press F key to go up
-                *(player->Z) = *(player->Z)+500;
-            }
-            if (GetAsyncKeyState('G') & 1) { //Press G key to go down
-                *(player->Z) = *(player->Z)-500;
-            }
-        }
-        if (hackVars->multiplePortalsHack) { // Performs the checks for the MultiplePortals section
-            PortalIDSwitch(portalGun->linkID);
-        }
-        if (GetAsyncKeyState('C')) {
-            std::cout << "Pressed C";
-            engineServer->ClientCmd("ent_create_portal_weight_box"); // Executes a game console command
-            while (GetAsyncKeyState('C')) {
-                Sleep(1);
-            }
-        }
-        if (GetAsyncKeyState('Z')) {
-            std::cout << "Pressed Z";
-            engineServer->ClientCmd("developer 1"); // Executes a game console command
-            while (GetAsyncKeyState('C')) {
-                Sleep(1);
-            }
-        }
-        if (GetAsyncKeyState('V')) {
-            std::cout << "Pressed V";
-            engineServer->ClientCmd("ent_text"); // Executes a game console command
-            while (GetAsyncKeyState('C')) {
-                Sleep(1);
+        if (hackState->superJump) {
+            // Super jump when space pressed
+            if (GetAsyncKeyState(VK_SPACE) & 1) {
+                *player->velocity->z = 500.0f;
             }
         }
 
+        // Allows switching of the portal gun's link ID for multiple portals.
+        if (hackState->multiPortals) { 
+            PortalIDSwitch(portalGun->linkID);
+        }
+
+        // Create a weight box if C pressed
+        if (hackState->weightBoxSpawn) {
+            if (GetAsyncKeyState('C')) {
+                engineServer->ClientCmd("ent_create_portal_weight_box");
+                while (GetAsyncKeyState('C')) {
+                    Sleep(1);
+                }
+            }
+        }
         
         ReleaseSRWLockShared(&srwlock);
     }
+
     if (f) fclose(f);
     FreeConsole();  
     FreeLibraryAndExitThread(module, 0);
@@ -590,7 +713,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     {
     case DLL_PROCESS_ATTACH:
     {
-        windowVars->global_hInstance = hModule;
+        windowState->global_hInstance = hModule;
         CloseHandle(CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)MyThread, hModule, 0, nullptr));
         CloseHandle(CreateThread(nullptr, 0, (LPTHREAD_START_ROUTINE)CreateNewWindow, hModule, 0, nullptr));
     }

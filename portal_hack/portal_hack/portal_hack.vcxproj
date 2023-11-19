@@ -223,7 +223,7 @@
   <ItemGroup>
     <ClInclude Include="framework.h" />
     <ClInclude Include="GetEntityList.h" />
-    <ClInclude Include="globalValues.h" />
+    <ClInclude Include="dllmain.h" />
     <ClInclude Include="header.h" />
     <ClInclude Include="IVEngineClient.h" />
     <ClInclude Include="IVEngineServer.h" />
@@ -231,9 +231,8 @@
     <ClInclude Include="portal_hack.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ControlWindow.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="patternMatching.cpp" />
+    <ClCompile Include="PatternMatching.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Create</PrecompiledHeader>
@@ -242,7 +241,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="portal_hack.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

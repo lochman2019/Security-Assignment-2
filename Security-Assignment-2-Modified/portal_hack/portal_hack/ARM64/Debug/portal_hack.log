@@ -1,0 +1,4 @@
+﻿  dllmain.cpp
+C:\Users\User\source\repos\portal_hack\portal_hack\dllmain.cpp(56): warning C4715: 'WindowFunction': not all control paths return a value
+     Creating library C:\Users\User\source\repos\portal_hack\ARM64\Debug\portalhack.lib and object C:\Users\User\source\repos\portal_hack\ARM64\Debug\portalhack.exp
+  portal_hack.vcxproj -> C:\Users\User\source\repos\portal_hack\ARM64\Debug\portalhack.dll

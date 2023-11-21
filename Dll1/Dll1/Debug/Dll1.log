@@ -1,0 +1,3 @@
+﻿  dllmain.cpp
+C:\Users\lochm\source\repos\Dll1\Dll1\dllmain.cpp(54,54): warning C4805: '==': unsafe mix of type 'bool' and type 'float' in operation
+  Dll1.vcxproj -> C:\Users\lochm\source\repos\Dll1\Debug\Dll1.dll

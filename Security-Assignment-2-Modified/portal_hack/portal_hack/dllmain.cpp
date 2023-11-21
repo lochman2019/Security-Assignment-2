@@ -640,7 +640,26 @@ void DisplayGrid() {
 }
 
 void teleportShiftMove() {
-
+    const float pi = 2 * acos(0.0);
+    uintptr_t EnginePtr = (uintptr_t)GetModuleHandle(L"engine.dll");
+    float* look_x = (float*)(EnginePtr + 0x45808C);
+    float* look_y = (float*)(EnginePtr + 0x458090);
+    float* look_z = (float*)(EnginePtr + 0x458094);
+    //move in front of you for total of distance 33.33f
+    float angley = (float)((*look_y) * (pi / 180)); //convert angle to radians
+    float anglex = (float)((*look_x) * (pi / 180));
+    float x_axis = 33.33f * cos(angley);
+    float y_axis = 33.33f * sin(angley);
+    float z_axis = 33.33f * sin(-anglex);
+    std::cout << "y-axis face: " << y_axis << ", x-axis face: " << x_axis << std::endl;
+    uintptr_t ServerPtr = (uintptr_t)GetModuleHandle(L"server.dll");
+    uintptr_t fS = *(uintptr_t*)(ServerPtr + 0x006E4E94);
+    float* playerX = (float*)(fS + 0x304);
+    float* playerY = (float*)(fS + 0x308);
+    float* playerZ = (float*)(fS + 0x30C);
+    *playerX += x_axis;
+    *playerY += y_axis;
+    *playerZ += z_axis;
 }
 
 
@@ -752,29 +771,10 @@ DWORD WINAPI MyThread(HMODULE module) {
 
         if (hackState->teleportshift) {
             if (GetAsyncKeyState('P')) {
-                const float pi = 2 * acos(0.0);
-                uintptr_t EnginePtr = (uintptr_t)GetModuleHandle(L"engine.dll");
-                float* look_x = (float*)(EnginePtr + 0x45808C);
-                float* look_y = (float*)(EnginePtr + 0x458090);
-                float* look_z = (float*)(EnginePtr + 0x458094);
-                //move in front of you for total of distance 33.33f
-                float angley = (float)((*look_y) * (pi / 180)); //convert angle to radians
-                float anglex = (float)((*look_x) * (pi / 180));
-                float x_axis = 33.33f * cos(angley);
-                float y_axis = 33.33f * sin(angley);
-                float z_axis = 33.33f * sin(anglex);
-                std::cout << "y-axis face: " << y_axis << ", x-axis face: " << x_axis << std::endl;
-                uintptr_t ServerPtr = (uintptr_t)GetModuleHandle(L"server.dll");
-                uintptr_t fS = *(uintptr_t*)(ServerPtr + 0x006E4E94);
-                float* playerX = (float*)(fS + 0x304);
-                float* playerY = (float*)(fS + 0x308);
-                float* playerZ = (float*)(fS + 0x30C);
-                *playerX += x_axis;
-                *playerY += y_axis;
-                *playerZ += z_axis;
-            }
-            while (GetAsyncKeyState('P')) {
+                teleportShiftMove();
+                while (GetAsyncKeyState('P')) {
                 Sleep(1);
+                }
             }
         }
         

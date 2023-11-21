@@ -1,22 +1,22 @@
 ﻿  dllmain.cpp
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.h(20,2): warning C4091: 'typedef ': ignored on left of 'EntityList' when no variable is declared
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(521,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(522,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(523,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(524,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(525,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(526,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(593,16): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,26): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,33): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,40): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,47): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,54): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,26): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,33): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,40): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,47): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,54): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(755,36): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(755,32): warning C4244: 'initializing': conversion from 'double' to 'const float', possible loss of data
-  portal_hack.vcxproj -> C:\Users\lochm\gitsecurity\Security-Assignment-2-Modified\portal_hack\Debug\portalhack.dll
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.h(20,2): warning C4091: 'typedef ': ignored on left of 'EntityList' when no variable is declared
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(521,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(522,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(523,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(524,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(525,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(526,24): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(593,16): warning C4244: 'initializing': conversion from 'int' to 'float', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,26): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,33): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,40): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,47): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(608,54): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,26): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,33): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,40): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,47): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(609,54): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(643,24): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\portal_hack\dllmain.cpp(643,20): warning C4244: 'initializing': conversion from 'double' to 'const float', possible loss of data
+  portal_hack.vcxproj -> C:\Users\lochm\gitsecurity\Security-Assignment-2\Security-Assignment-2-Modified\portal_hack\Debug\portalhack.dll
